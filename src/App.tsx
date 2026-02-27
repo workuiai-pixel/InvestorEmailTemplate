@@ -2,31 +2,24 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Send, 
+  User, 
+  Users, 
+  FileText, 
+  Sparkles, 
   Copy, 
   Check, 
-  RefreshCw, 
-  User, 
-  MapPin, 
-  Globe, 
-  Linkedin, 
-  Mail, 
-  Briefcase, 
-  Heart, 
-  Target, 
-  ChevronRight,
-  ChevronLeft,
-  Sparkles
+  Loader2, 
+  ArrowRight,
+  Info
 } from 'lucide-react';
-import { generateOutreachEmail, parseLeadRow, LeadData } from './services/geminiService';
+import { LeadData, GenerationResult } from './types';
+import { generateEmails } from './services/geminiService';
 
-const INITIAL_LEAD_DATA: LeadData = {
-  leadType: '',
-  location: '',
-  website: '',
-  title: '',
-  firstName: '',
-  lastName: '',
-  linkedIn: '',
+const INITIAL_DATA: LeadData = {
+  title1: '',
+  firstName1: '',
+  lastName1: '',
+  linkedIn1: '',
   email1: '',
   title2: '',
   firstName2: '',
@@ -34,373 +27,294 @@ const INITIAL_LEAD_DATA: LeadData = {
   linkedIn2: '',
   email2: '',
   investmentThemes: '',
-  impact: '',
+  impactPhilanthropy: '',
   personalizationAngle: '',
   sources: '',
-  status: ''
 };
 
 export default function App() {
-  const [leadData, setLeadData] = useState<LeadData>(INITIAL_LEAD_DATA);
-  const [step, setStep] = useState(1);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isParsing, setIsParsing] = useState(false);
-  const [smartPasteText, setSmartPasteText] = useState('');
-  const [showSmartPaste, setShowSmartPaste] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [data, setData] = useState<LeadData>(INITIAL_DATA);
+  const [result, setResult] = useState<GenerationResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setLeadData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSmartPaste = async () => {
-    if (!smartPasteText.trim()) return;
-    setIsParsing(true);
-    try {
-      const parsedData = await parseLeadRow(smartPasteText);
-      setLeadData(prev => ({ ...prev, ...parsedData }));
-      setSmartPasteText('');
-      setShowSmartPaste(false);
-      // Optional: move to next step if data is populated
-    } catch (error) {
-      console.error("Parsing error:", error);
-    } finally {
-      setIsParsing(false);
-    }
+    setData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleGenerate = async () => {
-    setIsGenerating(true);
-    setResult(null);
+    setLoading(true);
     try {
-      const output = await generateOutreachEmail(leadData);
-      setResult(output || "Failed to generate email.");
+      const res = await generateEmails(data);
+      setResult(res);
     } catch (error) {
-      console.error("Generation error:", error);
-      setResult("An error occurred while generating the email. Please check your API key and try again.");
+      alert('Failed to generate emails. Please check your API key and try again.');
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
   };
 
-  const handleCopy = () => {
-    if (result) {
-      navigator.clipboard.writeText(result);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const resetForm = () => {
-    setLeadData(INITIAL_LEAD_DATA);
-    setResult(null);
-    setStep(1);
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f2ed] text-[#1a1a1a] font-sans selection:bg-[#5A5A40] selection:text-white">
+    <div className="min-h-screen bg-[#F5F5F0] text-[#141414] font-sans selection:bg-[#5A5A40] selection:text-white">
       {/* Header */}
-      <header className="border-b border-[#1a1a1a]/10 px-6 py-8 md:px-12 flex justify-between items-center">
-        <div className="flex flex-col">
-          <h1 className="text-2xl md:text-3xl font-serif tracking-tight uppercase">Tai Nuare</h1>
-          <span className="text-[10px] uppercase tracking-[0.2em] opacity-60 font-medium">Outreach Specialist</span>
-        </div>
-        <div className="hidden md:flex items-center gap-8 text-[11px] uppercase tracking-widest font-semibold opacity-70">
-          <span className="hover:opacity-100 cursor-pointer transition-opacity">Regenerative</span>
-          <span className="hover:opacity-100 cursor-pointer transition-opacity">Stewardship</span>
-          <span className="hover:opacity-100 cursor-pointer transition-opacity">Panama</span>
+      <header className="border-b border-[#141414]/10 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#5A5A40] rounded-full flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="font-serif italic text-xl tracking-tight">Tai Nuare Outreach</h1>
+          </div>
+          <div className="text-xs uppercase tracking-widest opacity-50 font-semibold">
+            Investor Relations Portal
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-12 md:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           
-          {/* Left Column: Form */}
-          <div className="lg:col-span-5 space-y-12">
-            <div className="space-y-4">
-              <h2 className="text-4xl md:text-5xl font-serif font-light leading-tight">
-                Craft the <span className="italic">perfect</span> introduction.
-              </h2>
-              <p className="text-[#1a1a1a]/60 text-lg max-w-md">
-                Generate high-trust, personalized outreach for regenerative real estate and wellness.
-              </p>
-            </div>
-
-            <div className="space-y-8">
-              {/* Smart Paste Toggle */}
-              <div className="flex justify-between items-center">
-                <button 
-                  onClick={() => setShowSmartPaste(!showSmartPaste)}
-                  className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-[#5A5A40] hover:opacity-70 transition-opacity"
-                >
-                  <Sparkles size={12} />
-                  {showSmartPaste ? 'Cancel Smart Paste' : 'Smart Paste Row'}
-                </button>
-                <div className="flex gap-2">
-                  {[1, 2, 3].map((s) => (
-                    <div 
-                      key={s} 
-                      className={`h-1 w-8 rounded-full transition-all duration-500 ${step >= s ? 'bg-[#5A5A40]' : 'bg-[#1a1a1a]/10'}`}
-                    />
-                  ))}
+          {/* Input Section */}
+          <div className="lg:col-span-5 space-y-8">
+            <section className="space-y-6">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#141414]/10">
+                <User className="w-4 h-4 opacity-50" />
+                <h2 className="font-serif italic text-lg">Lead 1 Details</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Title" name="title1" value={data.title1} onChange={handleInputChange} placeholder="e.g. Managing Director" />
+                <Input label="First Name" name="firstName1" value={data.firstName1} onChange={handleInputChange} />
+                <Input label="Last Name" name="lastName1" value={data.lastName1} onChange={handleInputChange} />
+                <Input label="Email" name="email1" value={data.email1} onChange={handleInputChange} />
+                <div className="col-span-2">
+                  <Input label="LinkedIn URL" name="linkedIn1" value={data.linkedIn1} onChange={handleInputChange} />
                 </div>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#141414]/10">
+                <Users className="w-4 h-4 opacity-50" />
+                <h2 className="font-serif italic text-lg">Lead 2 Details (Optional)</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Title" name="title2" value={data.title2} onChange={handleInputChange} />
+                <Input label="First Name" name="firstName2" value={data.firstName2} onChange={handleInputChange} />
+                <Input label="Last Name" name="lastName2" value={data.lastName2} onChange={handleInputChange} />
+                <Input label="Email" name="email2" value={data.email2} onChange={handleInputChange} />
+                <div className="col-span-2">
+                  <Input label="LinkedIn URL" name="linkedIn2" value={data.linkedIn2} onChange={handleInputChange} />
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#141414]/10">
+                <FileText className="w-4 h-4 opacity-50" />
+                <h2 className="font-serif italic text-lg">Context & Personalization</h2>
+              </div>
+              <div className="space-y-4">
+                <TextArea 
+                  label="Investment Themes / Prior Investments" 
+                  name="investmentThemes" 
+                  value={data.investmentThemes} 
+                  onChange={handleInputChange} 
+                  placeholder="What have they invested in before?"
+                />
+                <TextArea 
+                  label="Impact / Philanthropy" 
+                  name="impactPhilanthropy" 
+                  value={data.impactPhilanthropy} 
+                  onChange={handleInputChange} 
+                  placeholder="What causes do they support?"
+                />
+                <TextArea 
+                  label="Personalization Angle" 
+                  name="personalizationAngle" 
+                  value={data.personalizationAngle} 
+                  onChange={handleInputChange} 
+                  placeholder="Specific connection or shared interest"
+                />
+                <Input 
+                  label="Sources" 
+                  name="sources" 
+                  value={data.sources} 
+                  onChange={handleInputChange} 
+                  placeholder="LinkedIn, News, etc."
+                />
+              </div>
+            </section>
+
+            <button
+              onClick={handleGenerate}
+              disabled={loading}
+              className="w-full py-4 bg-[#5A5A40] text-white rounded-full font-medium flex items-center justify-center gap-2 hover:bg-[#4A4A30] transition-all disabled:opacity-50 disabled:cursor-not-allowed group shadow-lg shadow-[#5A5A40]/20"
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  Generate Outreach Emails
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Output Section */}
+          <div className="lg:col-span-7">
+            <div className="sticky top-28 space-y-6">
+              <div className="flex items-center justify-between pb-2 border-b border-[#141414]/10">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4 opacity-50" />
+                  <h2 className="font-serif italic text-lg">Generated Drafts</h2>
+                </div>
+                {result && (
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-[#5A5A40] bg-[#5A5A40]/10 px-2 py-1 rounded">
+                    Ready to Review
+                  </span>
+                )}
               </div>
 
               <AnimatePresence mode="wait">
-                {showSmartPaste ? (
-                  <motion.div
-                    key="smart-paste"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="bg-white p-6 rounded-2xl border border-[#5A5A40]/20 space-y-4 shadow-xl shadow-[#5A5A40]/5"
+                {!result && !loading ? (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="h-[600px] border-2 border-dashed border-[#141414]/10 rounded-3xl flex flex-col items-center justify-center text-center p-12 space-y-4"
                   >
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold opacity-50">Paste Spreadsheet Row</label>
-                      <textarea 
-                        value={smartPasteText}
-                        onChange={(e) => setSmartPasteText(e.target.value)}
-                        placeholder="Paste the entire row from Excel or Google Sheets here..."
-                        className="w-full bg-[#f5f2ed]/50 border border-[#1a1a1a]/10 rounded-xl p-4 text-[13px] outline-none focus:border-[#5A5A40] transition-all min-h-[100px] resize-none"
-                      />
+                    <div className="w-16 h-16 bg-[#141414]/5 rounded-full flex items-center justify-center mb-2">
+                      <Sparkles className="w-8 h-8 opacity-20" />
                     </div>
-                    <button 
-                      onClick={handleSmartPaste}
-                      disabled={isParsing || !smartPasteText.trim()}
-                      className="w-full bg-[#5A5A40] text-white py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold hover:bg-[#4a4a34] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {isParsing ? <RefreshCw className="animate-spin" size={14} /> : <Sparkles size={14} />}
-                      {isParsing ? 'Parsing Data...' : 'Auto-Fill Form'}
-                    </button>
+                    <h3 className="font-serif italic text-xl">Waiting for Input</h3>
+                    <p className="text-sm opacity-50 max-w-xs">
+                      Fill in the lead details and personalization context to generate high-trust outreach drafts.
+                    </p>
+                  </motion.div>
+                ) : loading ? (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="h-[600px] bg-white rounded-3xl shadow-xl shadow-[#141414]/5 flex flex-col items-center justify-center p-12 space-y-6"
+                  >
+                    <div className="relative">
+                      <div className="w-20 h-20 border-4 border-[#5A5A40]/10 border-t-[#5A5A40] rounded-full animate-spin" />
+                      <Sparkles className="w-6 h-6 text-[#5A5A40] absolute inset-0 m-auto animate-pulse" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h3 className="font-serif italic text-xl">Crafting Outreach...</h3>
+                      <p className="text-sm opacity-50">Analyzing lead data and aligning with Tai Nuare's vision.</p>
+                    </div>
                   </motion.div>
                 ) : (
-                  <div key="form-steps">
-                    {step === 1 && (
                   <motion.div 
-                    key="step1"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className="space-y-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-8 pb-12"
                   >
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold opacity-50">Primary Contact</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <Input icon={<User size={14}/>} placeholder="First Name" name="firstName" value={leadData.firstName} onChange={handleInputChange} />
-                        <Input placeholder="Last Name" name="lastName" value={leadData.lastName} onChange={handleInputChange} />
-                      </div>
-                      <Input icon={<Briefcase size={14}/>} placeholder="Title" name="title" value={leadData.title} onChange={handleInputChange} />
-                      <Input icon={<Mail size={14}/>} placeholder="Email" name="email1" value={leadData.email1} onChange={handleInputChange} />
-                      <Input icon={<Linkedin size={14}/>} placeholder="LinkedIn URL" name="linkedIn" value={leadData.linkedIn} onChange={handleInputChange} />
-                    </div>
-                    <div className="flex justify-end">
-                      <button 
-                        onClick={() => setStep(2)}
-                        className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold hover:gap-4 transition-all"
-                      >
-                        Context & Location <ChevronRight size={14} />
-                      </button>
-                    </div>
+                    {result?.lead_1 && (
+                      <EmailCard 
+                        title={`Lead 1: ${data.firstName1} ${data.lastName1}`}
+                        email={result.lead_1} 
+                        onCopy={(text) => copyToClipboard(text, 'lead1')}
+                        isCopied={copied === 'lead1'}
+                      />
+                    )}
+                    {result?.lead_2 && result.lead_2.email && (
+                      <EmailCard 
+                        title={`Lead 2: ${data.firstName2} ${data.lastName2}`}
+                        email={result.lead_2} 
+                        onCopy={(text) => copyToClipboard(text, 'lead2')}
+                        isCopied={copied === 'lead2'}
+                      />
+                    )}
                   </motion.div>
                 )}
-
-                {step === 2 && (
-                  <motion.div 
-                    key="step2"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className="space-y-6"
-                  >
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold opacity-50">Organization Details</label>
-                      <Input icon={<MapPin size={14}/>} placeholder="Location (e.g. San Francisco, CA)" name="location" value={leadData.location} onChange={handleInputChange} />
-                      <Input icon={<Globe size={14}/>} placeholder="Website" name="website" value={leadData.website} onChange={handleInputChange} />
-                      <Input icon={<Target size={14}/>} placeholder="Lead Type (e.g. Family Office)" name="leadType" value={leadData.leadType} onChange={handleInputChange} />
-                    </div>
-                    <div className="flex justify-between">
-                      <button 
-                        onClick={() => setStep(1)}
-                        className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold opacity-50 hover:opacity-100 transition-all"
-                      >
-                        <ChevronLeft size={14} /> Back
-                      </button>
-                      <button 
-                        onClick={() => setStep(3)}
-                        className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold hover:gap-4 transition-all"
-                      >
-                        Personalization <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {step === 3 && (
-                  <motion.div 
-                    key="step3"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className="space-y-6"
-                  >
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold opacity-50">Strategic Alignment</label>
-                      <TextArea icon={<Sparkles size={14}/>} placeholder="Investment Themes or Prior Investments" name="investmentThemes" value={leadData.investmentThemes} onChange={handleInputChange} />
-                      <TextArea icon={<Heart size={14}/>} placeholder="Impact or Philanthropy" name="impact" value={leadData.impact} onChange={handleInputChange} />
-                      <TextArea icon={<Target size={14}/>} placeholder="Personalization Angle (Recent news, shared connection)" name="personalizationAngle" value={leadData.personalizationAngle} onChange={handleInputChange} />
-                    </div>
-                    <div className="flex justify-between">
-                      <button 
-                        onClick={() => setStep(2)}
-                        className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold opacity-50 hover:opacity-100 transition-all"
-                      >
-                        <ChevronLeft size={14} /> Back
-                      </button>
-                      <button 
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                        className="bg-[#1a1a1a] text-white px-8 py-4 rounded-full text-[11px] uppercase tracking-widest font-bold hover:bg-[#5A5A40] transition-colors flex items-center gap-3 disabled:opacity-50"
-                      >
-                        {isGenerating ? <RefreshCw className="animate-spin" size={14} /> : <Send size={14} />}
-                        {isGenerating ? 'Generating...' : 'Generate Outreach'}
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            )}
-          </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Right Column: Result */}
-          <div className="lg:col-span-7">
-            <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-2xl shadow-black/5 min-h-[600px] flex flex-col border border-[#1a1a1a]/5">
-              {!result && !isGenerating ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 opacity-30">
-                  <div className="w-20 h-20 rounded-full border border-[#1a1a1a]/20 flex items-center justify-center">
-                    <Send size={32} />
-                  </div>
-                  <p className="font-serif italic text-xl">Your generated outreach will appear here.</p>
-                </div>
-              ) : isGenerating ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full border-t-2 border-[#5A5A40] animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Sparkles className="text-[#5A5A40]" size={24} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-serif italic text-2xl">Synthesizing data...</p>
-                    <p className="text-[10px] uppercase tracking-widest opacity-50">Applying high-trust outreach principles</p>
-                  </div>
-                </div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }} 
-                  className="flex-1 flex flex-col h-full"
-                >
-                  <div className="flex justify-between items-start mb-8">
-                    <div className="space-y-1">
-                      <h3 className="text-[10px] uppercase tracking-widest font-bold opacity-50">Generated Outreach</h3>
-                      <p className="font-serif italic text-lg">Ready for review</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={handleCopy}
-                        className="p-3 rounded-full border border-[#1a1a1a]/10 hover:bg-[#f5f2ed] transition-colors relative group"
-                        title="Copy to clipboard"
-                      >
-                        {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
-                        <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          {copied ? 'Copied!' : 'Copy'}
-                        </span>
-                      </button>
-                      <button 
-                        onClick={resetForm}
-                        className="p-3 rounded-full border border-[#1a1a1a]/10 hover:bg-[#f5f2ed] transition-colors group"
-                        title="Start over"
-                      >
-                        <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-auto bg-[#f5f2ed]/30 rounded-2xl p-6 border border-[#1a1a1a]/5">
-                    <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-[#1a1a1a]/80">
-                      {result}
-                    </pre>
-                  </div>
-
-                  <div className="mt-8 pt-8 border-t border-[#1a1a1a]/5 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#5A5A40] flex items-center justify-center text-white font-serif italic">
-                        CN
-                      </div>
-                      <div className="text-[10px] uppercase tracking-widest font-bold">
-                        <p>Chris Newberry</p>
-                        <p className="opacity-50">Founder & Steward</p>
-                      </div>
-                    </div>
-                    <div className="text-[10px] uppercase tracking-widest font-bold opacity-30">
-                      Tai Nuare © 2026
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Footer Decoration */}
-      <footer className="mt-20 border-t border-[#1a1a1a]/10 px-6 py-12 md:px-12 flex flex-col md:flex-row justify-between items-center gap-8">
-        <div className="flex gap-12 text-[10px] uppercase tracking-[0.2em] font-bold opacity-40">
-          <span>Panama</span>
-          <span>Regenerative</span>
-          <span>Wellness</span>
-        </div>
-        <div className="text-[10px] uppercase tracking-[0.2em] font-bold opacity-20">
-          Built for high-trust relationships
+      {/* Footer Info */}
+      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-[#141414]/10">
+        <div className="flex flex-col md:flex-row gap-8 justify-between items-start opacity-50 text-xs">
+          <div className="max-w-md space-y-2">
+            <div className="flex items-center gap-2 font-bold uppercase tracking-widest mb-2">
+              <Info className="w-3 h-3" />
+              Guidelines Applied
+            </div>
+            <p>Emails are generated following high-trust, low-pressure principles. No promotional adjectives, no capital structure mentions, and strictly personalized first paragraphs.</p>
+          </div>
+          <div className="text-right">
+            <p>© 2026 Tai Nuare Project</p>
+            <p>Regenerative Island Real Estate & Wellness</p>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
 
-function Input({ icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon?: React.ReactNode }) {
+function Input({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <div className="relative group">
-      {icon && (
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1a1a1a]/30 group-focus-within:text-[#5A5A40] transition-colors">
-          {icon}
-        </div>
-      )}
+    <div className="space-y-1.5">
+      <label className="text-[10px] uppercase tracking-widest font-bold opacity-50 ml-1">{label}</label>
       <input 
-        className={`w-full bg-white border border-[#1a1a1a]/10 rounded-xl py-4 ${icon ? 'pl-12' : 'px-4'} pr-4 text-[14px] outline-none focus:border-[#5A5A40] focus:ring-1 focus:ring-[#5A5A40]/20 transition-all placeholder:text-[#1a1a1a]/20`}
         {...props}
+        className="w-full px-4 py-3 bg-white border border-[#141414]/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5A5A40]/20 focus:border-[#5A5A40] transition-all text-sm placeholder:opacity-30"
       />
     </div>
   );
 }
 
-function TextArea({ icon, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { icon?: React.ReactNode }) {
+function TextArea({ label, ...props }: { label: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
-    <div className="relative group">
-      {icon && (
-        <div className="absolute left-4 top-5 text-[#1a1a1a]/30 group-focus-within:text-[#5A5A40] transition-colors">
-          {icon}
-        </div>
-      )}
+    <div className="space-y-1.5">
+      <label className="text-[10px] uppercase tracking-widest font-bold opacity-50 ml-1">{label}</label>
       <textarea 
-        rows={3}
-        className={`w-full bg-white border border-[#1a1a1a]/10 rounded-xl py-4 ${icon ? 'pl-12' : 'px-4'} pr-4 text-[14px] outline-none focus:border-[#5A5A40] focus:ring-1 focus:ring-[#5A5A40]/20 transition-all placeholder:text-[#1a1a1a]/20 resize-none`}
         {...props}
+        rows={3}
+        className="w-full px-4 py-3 bg-white border border-[#141414]/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5A5A40]/20 focus:border-[#5A5A40] transition-all text-sm placeholder:opacity-30 resize-none"
       />
+    </div>
+  );
+}
+
+function EmailCard({ title, email, onCopy, isCopied }: { title: string, email: { subject: string, email: string }, onCopy: (text: string) => void, isCopied: boolean }) {
+  return (
+    <div className="bg-white rounded-3xl shadow-xl shadow-[#141414]/5 overflow-hidden border border-[#141414]/5">
+      <div className="px-6 py-4 bg-[#F9F9F7] border-b border-[#141414]/5 flex items-center justify-between">
+        <h3 className="font-serif italic text-base">{title}</h3>
+        <button 
+          onClick={() => onCopy(`Subject: ${email.subject}\n\n${email.email}`)}
+          className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-[#5A5A40] hover:opacity-70 transition-opacity"
+        >
+          {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          {isCopied ? 'Copied' : 'Copy All'}
+        </button>
+      </div>
+      <div className="p-8 space-y-6">
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase tracking-widest font-bold opacity-30">Subject Line</label>
+          <p className="text-sm font-medium">{email.subject}</p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase tracking-widest font-bold opacity-30">Message Body</label>
+          <div className="text-sm leading-relaxed whitespace-pre-wrap text-[#141414]/80">
+            {email.email}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
